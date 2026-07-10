@@ -4,7 +4,7 @@
    naturally-dropped (=100% ripe) references, and reports closeness as a RANGE plus
    a plain confidence word — never a fake decimal. Everything is on-device.
    ------------------------------------------------------------------------------- */
-const CACHE_VERSION='tsod-20260710-10';
+const CACHE_VERSION='tsod-20260710-11';
 const LS_KEY='tsod_v1';
 const MIN_REFS=10;          // target baseline; matching stays honest below this
 const OFFER_MATCH_AT=3;     // refuse to guess with fewer than this many refs
@@ -439,6 +439,7 @@ function renderTestGate(){
 
 /* --- recording flows (press to start, press again to stop) --- */
 let busy=false;               // guards the async stop→process phase
+let lastResultFeat=null;      // remember the shown result so it can re-render on language switch
 let recTimer=null;
 
 function setRecUI(btn, state){
@@ -537,6 +538,7 @@ async function processClip(btn, purpose, clip){
 }
 
 function showResult(feat){
+  lastResultFeat=feat;
   const box=$('#testResult');
   const m=matchAgainstBaseline(feat);
   if(m.status!=='ok'){
@@ -562,7 +564,7 @@ function showResult(feat){
     <div class="why">${why}</div>
     <div class="btnrow"><button class="btn" id="againBtn">${T('再敲一次','Tap again')}</button></div>
   </div>`;
-  $('#againBtn').onclick=()=>{box.innerHTML='';liveAnalyser.idle();setStage('待机','idle','—','');};
+  $('#againBtn').onclick=()=>{lastResultFeat=null;box.innerHTML='';liveAnalyser.idle();setStage('待机','idle','—','');};
 }
 
 /* --- tabs / lang --- */
@@ -587,6 +589,7 @@ function initLang(){
     $('#langBtn').textContent=now?'中文':'EN';
     try{localStorage.setItem('tsod_lang',now?'en':'zh');}catch(e){}
     renderRefs();renderTestGate();
+    if(lastResultFeat) showResult(lastResultFeat);   // keep the result card in the new language
   };
 }
 

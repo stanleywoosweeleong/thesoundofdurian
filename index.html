@@ -200,15 +200,13 @@ footer{max-width:520px;margin:0 auto;padding:6px 16px 30px;text-align:center;fon
     <div id="testGate"></div>
 
     <button class="rec" id="recBtn"><span class="dot"></span><span id="recLabel"><span class="zh">开始录音</span><span class="en">Start recording</span></span></button>
-    <div class="note" style="text-align:center;margin-top:9px"><span class="zh">按「开始」→ 空出双手，用同一件硬物敲果身几下。工具会边听边判断，<b>够把握时自动停止</b>并给出结果，你也可以随时按「停止」。安静时段最准 —— 鸟叫等背景声会自动尽量剔除。</span><span class="en">Press Start → free both hands and tap the fruit body a few times with the same hard object. It judges as it listens and <b>auto-stops once it's confident</b> — or press Stop anytime. Quiet moments read best; background like birdsong is filtered out as much as possible.</span></div>
+    <div id="testResult"></div>
 
     <div class="sens">
       <label for="sensRange"><span class="zh">敲击灵敏度</span><span class="en">Tap sensitivity</span> · <span class="zh" style="font-weight:600">敲得越轻，调越高</span><span class="en" style="font-weight:600">tap softer → set higher</span><b id="sensVal">3×</b></label>
       <input id="sensRange" type="range" min="1" max="8" step="1" value="3">
       <div class="ends"><span class="zh">要用力敲</span><span class="en">firm taps</span><span class="zh">轻敲即可</span><span class="en">gentle taps</span></div>
     </div>
-
-    <div id="testResult"></div>
   </section>
 
   <!-- ============ BASELINE LIBRARY ============ -->
