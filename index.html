@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#1f3a2e">
+<meta name="description" content="敲榴莲 · 用自然落果做基准，听声辨熟的田间实验工具">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="敲榴莲">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="manifest" href="manifest.json">
+<title>敲榴莲 · The Sound of Durian</title>
+<style>
+:root{
+  --shell:#1f3a2e;        /* durian shell dark green */
+  --shell-2:#2c4d3d;
+  --flesh:#e8a94b;        /* ripe flesh amber */
+  --flesh-hi:#f4c66d;
+  --cream:#f6efdf;        /* pale custard */
+  --cream-2:#efe6d0;
+  --paper:#fdfaf3;
+  --ink:#243027;
+  --ink-soft:#6b7a6f;
+  --line:#e0d8c4;
+  --good:#3f7d55;
+  --warn:#c98a2b;
+  --bad:#b4482f;
+  --spine:#7fa06a;        /* husk-spine green, used for the live trace */
+  --wave:#8fd0a8;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--cream);color:var(--ink);
+  line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.lang-en .zh{display:none}
+body:not(.lang-en) .en{display:none}
+/* Chinese glyphs read small at Latin sizes — bump every visible .zh a notch. */
+.zh{font-size:1.12em;letter-spacing:.2px}
+
+/* ---- top bar ---- */
+header{
+  position:sticky;top:0;z-index:40;background:var(--shell);color:var(--cream);
+  padding:calc(env(safe-area-inset-top) + 11px) 16px 11px;
+  display:flex;align-items:center;gap:11px;
+  box-shadow:0 2px 14px rgba(0,0,0,.12);
+}
+.mark{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:var(--flesh);
+  display:flex;align-items:center;justify-content:center;font-size:19px}
+.brand{flex:1;min-width:0}
+.brand h1{margin:0;font-size:16px;font-weight:800;letter-spacing:.3px;line-height:1.15}
+.brand .sub{font-size:10.5px;opacity:.72;font-weight:600;letter-spacing:.4px}
+.langbtn{flex:0 0 auto;border:1px solid rgba(246,239,223,.35);background:transparent;color:var(--cream);
+  font-size:12px;font-weight:800;border-radius:9px;padding:6px 10px;cursor:pointer}
+
+/* ---- tab bar ---- */
+nav.tabs{position:sticky;top:calc(env(safe-area-inset-top) + 56px);z-index:35;
+  background:var(--shell-2);display:flex;padding:0 8px}
+nav.tabs button{flex:1;border:none;background:none;color:rgba(246,239,223,.6);
+  font-size:12.5px;font-weight:700;padding:11px 4px 12px;cursor:pointer;
+  border-bottom:2.5px solid transparent;line-height:1.2}
+nav.tabs button.active{color:var(--flesh-hi);border-bottom-color:var(--flesh)}
+
+main{max-width:520px;margin:0 auto;padding:16px 15px 40px}
+.panel{display:none;animation:fade .3s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:17px 16px;margin-bottom:14px;
+  box-shadow:0 1px 3px rgba(31,58,46,.04)}
+.card h2{margin:0 0 4px;font-size:15.5px;font-weight:800;color:var(--shell)}
+.card .lede{font-size:12.5px;color:var(--ink-soft);margin:0 0 14px}
+
+/* ---- the signature: the sound stage ---- */
+.stage{
+  position:relative;background:var(--shell);border-radius:18px;overflow:hidden;
+  padding:0;margin-bottom:14px;box-shadow:0 6px 22px rgba(31,58,46,.22)}
+.stage canvas{display:block;width:100%;height:172px;background:
+  radial-gradient(120% 90% at 50% 0%, #27473799 0%, transparent 60%), var(--shell)}
+.stage-tag{position:absolute;top:12px;left:14px;font-size:11px;font-weight:800;letter-spacing:.5px;
+  color:var(--wave);opacity:.85;text-transform:uppercase}
+.stage-read{position:absolute;bottom:12px;left:14px;right:14px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.stage-read .big{font-size:30px;font-weight:800;color:var(--cream);line-height:1;letter-spacing:.5px}
+.stage-read .small{font-size:11.5px;color:var(--wave);font-weight:700;text-align:right}
+
+/* record button */
+.rec{width:100%;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:800;cursor:pointer;
+  color:#fff;background:var(--flesh);box-shadow:0 4px 0 #c98a2b;transition:.1s;display:flex;align-items:center;justify-content:center;gap:9px}
+.rec:active{transform:translateY(3px);box-shadow:0 1px 0 #c98a2b}
+.rec.armed{background:var(--bad);box-shadow:0 4px 0 #8f3925;animation:pulse 1s infinite}
+.rec[disabled]{background:#c9c1ad;box-shadow:0 4px 0 #a89f89;cursor:default;animation:none}
+@keyframes pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+.dot{width:11px;height:11px;border-radius:50%;background:#fff;flex:0 0 auto;transition:border-radius .15s}
+.rec.armed .dot{border-radius:2px}
+.rec.armed .dot{animation:blink .8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ref counter chips */
+.refbar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:2px 0 4px}
+.refpip{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);background:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--ink-soft)}
+.refpip.on{background:var(--good);border-color:var(--good);color:#fff}
+.refcount{font-size:12px;font-weight:800;color:var(--shell);margin-left:auto}
+
+.btn{border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:10px 13px;font-size:13px;
+  font-weight:700;color:var(--shell);cursor:pointer}
+.btn.ghost{background:transparent}
+.btn.wide{width:100%;display:block;text-align:center}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn:active{transform:scale(.98)}
+.btnrow{display:flex;gap:8px;margin-top:10px}
+.btnrow .btn{flex:1;text-align:center}
+
+/* result verdict */
+.verdict{border-radius:14px;padding:15px 15px;margin-top:12px;border:1.5px solid var(--line);background:var(--cream)}
+.verdict.hi{border-color:var(--good);background:#eef5ec}
+.verdict.mid{border-color:var(--warn);background:#fdf3e4}
+.verdict.lo{border-color:var(--ink-soft);background:#f1efe8}
+.verdict .rng{font-size:26px;font-weight:800;color:var(--shell);line-height:1}
+.verdict .conf{font-size:12.5px;font-weight:700;margin-top:4px}
+.verdict .why{font-size:11.5px;color:var(--ink-soft);margin-top:9px;line-height:1.5}
+
+.field{margin-bottom:11px}
+.field label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);margin-bottom:4px}
+.field input,.field select{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;
+  font-size:14px;font-family:inherit;background:#fff;color:var(--ink)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--flesh)}
+
+.reflist{margin-top:6px}
+.refrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.refrow:first-child{border-top:none}
+.refrow .mini{flex:0 0 auto;width:52px;height:34px;border-radius:7px;background:var(--shell)}
+.refrow .meta{flex:1;min-width:0}
+.refrow .meta b{font-size:13px;color:var(--shell)}
+.refrow .meta small{display:block;font-size:11px;color:var(--ink-soft)}
+.refrow .play{flex:0 0 auto;border:none;background:none;color:var(--flesh);font-size:20px;cursor:pointer;padding:4px}
+.refrow .del{flex:0 0 auto;border:none;background:none;color:var(--ink-soft);font-size:16px;cursor:pointer;padding:4px}
+
+.note{font-size:11.5px;color:var(--ink-soft);line-height:1.55}
+.note b{color:var(--shell)}
+.disclaim{border-left:3px solid var(--warn);background:#fdf6e9;border-radius:0 10px 10px 0;
+  padding:11px 13px;font-size:11.5px;color:#7a5a1e;line-height:1.55;margin-top:12px}
+.empty{text-align:center;padding:22px 10px;color:var(--ink-soft);font-size:12.5px}
+.hr{height:1px;background:var(--line);margin:14px 0;border:none}
+.sens{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-top:11px}
+.sens label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:9px;flex-wrap:wrap}
+.sens label b{margin-left:auto;color:var(--shell);font-size:14px}
+.sens input[type=range]{width:100%;accent-color:var(--flesh)}
+.sens .ends{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-soft);margin-top:4px;font-weight:600}
+
+.step{display:flex;gap:11px;margin-bottom:13px}
+.step .n{flex:0 0 auto;width:25px;height:25px;border-radius:50%;background:var(--shell);color:var(--cream);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+.step .b{flex:1;font-size:12.5px;color:var(--ink);line-height:1.5}
+.step .b b{color:var(--shell)}
+
+footer{max-width:520px;margin:0 auto;padding:6px 16px 30px;text-align:center;font-size:10.5px;color:var(--ink-soft)}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:120;background:var(--shell);
+  color:var(--cream);border-radius:12px;padding:11px 16px;font-size:13px;font-weight:600;
+  box-shadow:0 8px 26px rgba(0,0,0,.28);max-width:calc(100% - 30px);opacity:0;transition:.25s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">🥁</div>
+  <div class="brand">
+    <h1><span class="zh">敲榴莲</span><span class="en">The Sound of Durian</span></h1>
+    <div class="sub"><span class="zh">听声辨熟 · 田间实验</span><span class="en">Listen for ripeness · field lab</span></div>
+  </div>
+  <button class="langbtn" id="langBtn">EN</button>
+</header>
+
+<nav class="tabs">
+  <button data-p="test" class="active"><span class="zh">敲一敲</span><span class="en">Tap a fruit</span></button>
+  <button data-p="refs"><span class="zh">基准库</span><span class="en">Baseline</span></button>
+  <button data-p="how"><span class="zh">怎么用</span><span class="en">How</span></button>
+</nav>
+
+<main>
+  <!-- ============ TAP A FRUIT ============ -->
+  <section class="panel active" id="test">
+    <div class="stage">
+      <canvas id="stageCanvas"></canvas>
+      <div class="stage-tag" id="stageTag"><span class="zh">待机</span><span class="en">idle</span></div>
+      <div class="stage-read">
+        <div class="big" id="stageBig">—</div>
+        <div class="small" id="stageSmall"></div>
+      </div>
+    </div>
+
+    <div id="testGate"></div>
+
+    <button class="rec" id="recBtn"><span class="dot"></span><span id="recLabel"><span class="zh">开始录音</span><span class="en">Start recording</span></span></button>
+    <div class="note" style="text-align:center;margin-top:9px"><span class="zh">按「开始」→ 空出双手，用同一件硬物敲果身几下。工具会边听边判断，<b>够把握时自动停止</b>并给出结果，你也可以随时按「停止」。安静时段最准 —— 鸟叫等背景声会自动尽量剔除。</span><span class="en">Press Start → free both hands and tap the fruit body a few times with the same hard object. It judges as it listens and <b>auto-stops once it's confident</b> — or press Stop anytime. Quiet moments read best; background like birdsong is filtered out as much as possible.</span></div>
+
+    <div class="sens">
+      <label for="sensRange"><span class="zh">敲击灵敏度</span><span class="en">Tap sensitivity</span> · <span class="zh" style="font-weight:600">敲得越轻，调越高</span><span class="en" style="font-weight:600">tap softer → set higher</span><b id="sensVal">3×</b></label>
+      <input id="sensRange" type="range" min="1" max="8" step="1" value="3">
+      <div class="ends"><span class="zh">要用力敲</span><span class="en">firm taps</span><span class="zh">轻敲即可</span><span class="en">gentle taps</span></div>
+    </div>
+
+    <div id="testResult"></div>
+  </section>
+
+  <!-- ============ BASELINE LIBRARY ============ -->
+  <section class="panel" id="refs">
+    <div class="card">
+      <h2><span class="zh">自然落果基准库</span><span class="en">Natural-drop baseline</span></h2>
+      <p class="lede"><span class="zh">用你自己树上<b>自然落果</b>的榴莲当「100% 熟」的声音基准。目标 10 颗，越多越准。</span><span class="en">Use your own <b>naturally-dropped</b> durians as the "100% ripe" sound baseline. Aim for 10 — more is steadier.</span></p>
+      <div class="refbar" id="refPips"></div>
+      <div id="refStatus" class="note"></div>
+      <div class="hr"></div>
+      <div class="field">
+        <label for="refTool"><span class="zh">敲击用的硬物（保持一致）</span><span class="en">Object you tap with (keep consistent)</span></label>
+        <input id="refTool" placeholder="e.g. 汤匙柄 / spoon handle" autocomplete="off">
+      </div>
+      <button class="rec" id="refRecBtn"><span class="dot"></span><span><span class="zh">开始录一颗落果基准</span><span class="en">Start recording a reference</span></span></button>
+      <div class="note" style="text-align:center;margin-top:8px"><span class="zh">按「开始」→ 敲这颗落果。听到干净一击后会<b>自动停止</b>并存入，也可按「停止」。凑够 10 颗后仍可用同一按钮继续加录，越多越准。</span><span class="en">Press Start → tap this dropped fruit. It <b>auto-stops</b> and saves after a clean knock — or press Stop. You can keep adding beyond 10 with the same button; more is steadier.</span></div>
+      <div class="reflist" id="refList"></div>
+    </div>
+  </section>
+
+  <!-- ============ HOW ============ -->
+  <section class="panel" id="how">
+    <div class="card">
+      <h2><span class="zh">怎么用</span><span class="en">How it works</span></h2>
+      <div class="step"><div class="n">1</div><div class="b"><span class="zh"><b>收集基准。</b>拿 10 颗<b>自然落果</b>（= 100% 树熟）的榴莲，用同一件硬物各敲几下录进「基准库」。这就是你这片园、这个品种「熟」的声音。</span><span class="en"><b>Collect the baseline.</b> Take 10 <b>naturally-dropped</b> durians (= 100% tree-ripe), tap each with the same hard object, and record them into the Baseline. That's what "ripe" sounds like on your trees.</span></div></div>
+      <div class="step"><div class="n">2</div><div class="b"><span class="zh"><b>敲树上的果。</b>按「开始录音」空出双手，用同一件硬物敲一颗还没落的果几下。工具会边听边判断，<b>够把握时自动停止</b>给出结果，也可手动按「停止」。</span><span class="en"><b>Tap a fruit on the tree.</b> Press Start to free both hands and tap a fruit that hasn't dropped a few times with the same object. It judges as it listens and <b>auto-stops once confident</b> — or press Stop yourself.</span></div></div>
+      <div class="step"><div class="n">3</div><div class="b"><span class="zh"><b>看接近度。</b>工具只截取敲击后那一下的<b>低频共振</b>（果肉/空腔的声音），和落果基准比对，给出「接近成熟约 X–Y%」加一个<b>把握度</b>。</span><span class="en"><b>Read the closeness.</b> The tool isolates only the <b>low-frequency resonance</b> right after the hit (the flesh/cavity sound), compares it to the drop-fruit baseline, and gives "≈ X–Y% toward ripe" plus a <b>confidence</b>.</span></div></div>
+      <div class="disclaim"><span class="zh"><b>诚实声明：</b>这是一个<b>田间实验工具</b>，不是实验室。它拿你自己的落果当唯一真相 —— 声音接近落果，就更可能熟。它<b>不测</b>干物质或糖度，背景噪音和敲法不一致都会降低把握度。把握度低时它会直说「不确定」，而不是编一个漂亮的数字。真正的定案，仍靠割开看、闻香、看落果。</span><span class="en"><b>Honest note:</b> this is a <b>field-experiment tool</b>, not a lab. It treats your own drop-fruit as the only ground truth — a sound close to drop-fruit is more likely ripe. It does <b>not</b> measure dry matter or sugar; noise and inconsistent tapping lower confidence. When confidence is low it says "unsure" rather than inventing a clean number. The real call still comes from cutting, aroma, and natural drop.</span></div>
+    </div>
+    <div class="card">
+      <h2><span class="zh">为什么能剔除鸟叫</span><span class="en">Why birdsong is filtered</span></h2>
+      <p class="note"><span class="zh">敲击是一记又短又猛的脆响，果身的成熟信息藏在<b>低频</b>（熟果偏闷、偏低；生果偏紧、偏高）。鸟叫是持续的<b>高频</b>。工具只分析敲击后约 250 毫秒的低频段，所以大部分鸟叫、风声会被自动忽略 —— 但一辆摩托或一声喊叫仍会干扰，这时把握度会自动降低，你可以重录。</span><span class="en">A tap is a short, sharp transient, and ripeness lives in the <b>low frequencies</b> (ripe = duller/lower, unripe = tighter/higher). Birdsong is continuous and <b>high</b>. The tool analyses only the low band in the ~250ms after the hit, so most birds and wind are ignored — but a motorbike or a shout still intrudes, which simply lowers confidence, and you can re-record.</span></p>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
