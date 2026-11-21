@@ -4,7 +4,7 @@
    naturally-dropped (=100% ripe) references, and reports closeness as a RANGE plus
    a plain confidence word — never a fake decimal. Everything is on-device.
    ------------------------------------------------------------------------------- */
-const CACHE_VERSION='tsod-20260710-11';
+const CACHE_VERSION='tsod-20260710-12';
 const LS_KEY='tsod_v1';
 const MIN_REFS=10;          // target baseline; matching stays honest below this
 const OFFER_MATCH_AT=3;     // refuse to guess with fewer than this many refs
@@ -15,15 +15,16 @@ const RECORDER_IDLE_RELEASE=120000; // keep the mic stream alive up to 2 min bet
 /* ---------- tiny helpers ---------- */
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>[...r.querySelectorAll(s)];
-const isEN=()=>document.body.classList.contains('lang-en');
-const T=(zh,en)=>isEN()?en:zh;
-function toast(zh,en){const t=$('#toast');t.textContent=T(zh,en);t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
+const LANGS=['zh','en','ms'];
+const curLang=()=>LANGS.find(l=>document.body.classList.contains('lang-'+l))||'zh';
+const T=(zh,en,ms)=>{const l=curLang();return l==='en'?en:(l==='ms'?(ms??en):zh);};
+function toast(zh,en,ms){const t=$('#toast');t.textContent=T(zh,en,ms);t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
 /* ---------- persistent store ---------- */
 let store={refs:[], tool:'', gain:SENS_DEF};
 function load(){try{const s=JSON.parse(localStorage.getItem(LS_KEY));if(s&&typeof s==='object'){store=Object.assign(store,s);}}catch(e){}}
-function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(store));}catch(e){toast('存储失败，可能空间已满','Save failed — storage may be full');}}
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(store));}catch(e){toast('存储失败，可能空间已满','Save failed — storage may be full','Gagal simpan — storan mungkin penuh');}}
 load();
 
 /* =====================================================================
@@ -360,8 +361,8 @@ const liveAnalyser={
 /* =====================================================================
    UI WIRING
    ===================================================================== */
-function setStage(tagZh,tagEn,big,small){
-  $('#stageTag').innerHTML=`<span class="zh">${tagZh}</span><span class="en">${tagEn}</span>`;
+function setStage(tagZh,tagEn,tagMs,big,small){
+  $('#stageTag').innerHTML=`<span class="zh">${tagZh}</span><span class="en">${tagEn}</span><span class="ms">${tagMs}</span>`;
   $('#stageBig').textContent=big??'—';
   $('#stageSmall').textContent=small||'';
 }
@@ -380,42 +381,42 @@ function renderRefs(){
 
   const rs=$('#refStatus');
   if(store.refs.length===0){
-    rs.innerHTML=T('还没有基准。先去捡自然落果的榴莲，敲进来。','No baseline yet. Gather naturally-dropped durians and tap them in.');
+    rs.innerHTML=T('还没有基准。先去捡自然落果的榴莲，敲进来。','No baseline yet. Gather naturally-dropped durians and tap them in.','Belum ada rujukan. Kumpul durian yang gugur sendiri dan rakam ketukannya.');
   }else if(store.refs.length<OFFER_MATCH_AT){
-    rs.innerHTML=T(`再录 ${OFFER_MATCH_AT-store.refs.length} 颗，才够开始比对。`,`${OFFER_MATCH_AT-store.refs.length} more before matching can begin.`);
+    rs.innerHTML=T(`再录 ${OFFER_MATCH_AT-store.refs.length} 颗，才够开始比对。`,`${OFFER_MATCH_AT-store.refs.length} more before matching can begin.`,`Rakam ${OFFER_MATCH_AT-store.refs.length} biji lagi sebelum perbandingan boleh bermula.`);
   }else if(store.refs.length<MIN_REFS){
     const cl=clusterStats(store.refs);
-    rs.innerHTML=T(`已可比对，但样本偏少。基准一致度：${Math.round(cl.tightness*100)}%。凑够 10 颗更稳。`,`Matching enabled, but samples are few. Baseline consistency: ${Math.round(cl.tightness*100)}%. Reach 10 for steadier reads.`);
+    rs.innerHTML=T(`已可比对，但样本偏少。基准一致度：${Math.round(cl.tightness*100)}%。凑够 10 颗更稳。`,`Matching enabled, but samples are few. Baseline consistency: ${Math.round(cl.tightness*100)}%. Reach 10 for steadier reads.`,`Perbandingan sudah boleh, tetapi sampel masih sedikit. Kekonsistenan rujukan: ${Math.round(cl.tightness*100)}%. Cukupkan 10 biji untuk bacaan lebih stabil.`);
   }else{
     const cl=clusterStats(store.refs);
-    rs.innerHTML=T(`基准完整（${store.refs.length} 颗）。一致度：${Math.round(cl.tightness*100)}%。想更准可用下方按钮继续加录，多多益善。`,`Baseline complete (${store.refs.length}). Consistency: ${Math.round(cl.tightness*100)}%. Keep tapping in more with the button below — the more drop-fruit, the steadier.`);
+    rs.innerHTML=T(`基准完整（${store.refs.length} 颗）。一致度：${Math.round(cl.tightness*100)}%。想更准可用下方按钮继续加录，多多益善。`,`Baseline complete (${store.refs.length}). Consistency: ${Math.round(cl.tightness*100)}%. Keep tapping in more with the button below — the more drop-fruit, the steadier.`,`Rujukan lengkap (${store.refs.length} biji). Kekonsistenan: ${Math.round(cl.tightness*100)}%. Teruskan menambah dengan butang di bawah — lebih banyak durian gugur, lebih stabil.`);
   }
   // Keep the "record another" button obviously live even past the 10 target.
   const rrb=$('#refRecBtn');
   if(rrb){
     const rlab=rrb.querySelector('span:last-child');
     if(rlab) rlab.innerHTML = store.refs.length>=MIN_REFS
-      ? T('再加录一颗（可选，越多越准）','Record another (optional — more = steadier)')
-      : (store.refs.length>0 ? T('再录一颗落果基准','Record another reference')
-                             : T('开始录一颗落果基准','Start recording a reference'));
+      ? T('再加录一颗（可选，越多越准）','Record another (optional — more = steadier)','Rakam sebiji lagi (pilihan — lebih banyak, lebih stabil)')
+      : (store.refs.length>0 ? T('再录一颗落果基准','Record another reference','Rakam satu lagi rujukan')
+                             : T('开始录一颗落果基准','Start recording a reference','Mula rakam satu rujukan'));
     rrb._idleLabel=null; // force doRecord to re-cache this fresh label
   }
 
   const list=$('#refList'); list.innerHTML='';
   if(store.refs.length===0){
-    list.innerHTML=`<div class="empty">${T('基准库是空的','Baseline is empty')}</div>`;
+    list.innerHTML=`<div class="empty">${T('基准库是空的','Baseline is empty','Rujukan masih kosong')}</div>`;
   }else{
     store.refs.slice().reverse().forEach((r)=>{
       const row=document.createElement('div');row.className='refrow';
       const dt=new Date(r.ts);
       row.innerHTML=`<canvas class="mini" width="104" height="68"></canvas>
-        <div class="meta"><b>#${r.n}</b><small>${r.tool?r.tool+' · ':''}${dt.toLocaleDateString()} · ${T('峰频','peak')} ${Math.round(r.feat.peakFreq)}Hz · SNR ${r.feat.snr.toFixed(0)}dB</small></div>
+        <div class="meta"><b>#${r.n}</b><small>${r.tool?r.tool+' · ':''}${dt.toLocaleDateString()} · ${T('峰频','peak','puncak')} ${Math.round(r.feat.peakFreq)}Hz · SNR ${r.feat.snr.toFixed(0)}dB</small></div>
         <button class="del" data-del="${r.id}" aria-label="delete">🗑</button>`;
       list.appendChild(row);
       drawMini(row.querySelector('.mini'),r.feat);
     });
     $$('[data-del]',list).forEach(b=>b.onclick=()=>{
-      if(!confirm(T('删除这颗基准？','Delete this reference?')))return;
+      if(!confirm(T('删除这颗基准？','Delete this reference?','Padam rujukan ini?')))return;
       store.refs=store.refs.filter(x=>x.id!==b.dataset.del);save();renderRefs();renderTestGate();
     });
   }
@@ -431,9 +432,9 @@ function renderTestGate(){
   const g=$('#testGate'); const nn=store.refs.length;
   if(nn>=OFFER_MATCH_AT){g.innerHTML='';return;}
   g.innerHTML=`<div class="verdict lo" style="margin-top:0;margin-bottom:12px">
-    <div class="conf" style="color:var(--ink-soft)">${T('还不能比对','Matching not ready')}</div>
-    <div class="why">${T(`需要至少 ${OFFER_MATCH_AT} 颗自然落果基准（目标 10）。现在有 ${nn} 颗。`,`Need at least ${OFFER_MATCH_AT} drop-fruit references (aim 10). You have ${nn}.`)}
-    <br><button class="btn wide" style="margin-top:10px" id="gotoRefs">${T('去建立基准库 →','Build the baseline →')}</button></div></div>`;
+    <div class="conf" style="color:var(--ink-soft)">${T('还不能比对','Matching not ready','Belum boleh banding')}</div>
+    <div class="why">${T(`需要至少 ${OFFER_MATCH_AT} 颗自然落果基准（目标 10）。现在有 ${nn} 颗。`,`Need at least ${OFFER_MATCH_AT} drop-fruit references (aim 10). You have ${nn}.`,`Perlu sekurang-kurangnya ${OFFER_MATCH_AT} rujukan durian gugur (sasaran 10). Anda ada ${nn}.`)}
+    <br><button class="btn wide" style="margin-top:10px" id="gotoRefs">${T('去建立基准库 →','Build the baseline →','Bina rujukan →')}</button></div></div>`;
   $('#gotoRefs').onclick=()=>switchTab('refs');
 }
 
@@ -448,8 +449,8 @@ function setRecUI(btn, state){
   if(state==='recording'){
     btn.classList.add('armed');
     lab.innerHTML=btn._recLabel || (btn.id==='refRecBtn'
-      ? T('敲击中… 完成后按停止','Tapping… press stop when done')
-      : T('敲击中… 完成后按停止','Tapping… press stop when done'));
+      ? T('敲击中… 完成后按停止','Tapping… press stop when done','Mengetuk… tekan henti bila siap')
+      : T('敲击中… 完成后按停止','Tapping… press stop when done','Mengetuk… tekan henti bila siap'));
   }else{
     btn.classList.remove('armed');
     lab.innerHTML=btn._idleLabel;
@@ -461,7 +462,7 @@ async function doRecord(btn, purpose){
   if(Recorder.active){
     clearInterval(recTimer); recTimer=null;
     const lab=btn.querySelector('span:last-child');
-    lab.innerHTML=`<span class="zh">分析中…</span><span class="en">Analysing…</span>`;
+    lab.innerHTML=`<span class="zh">分析中…</span><span class="en">Analysing…</span><span class="ms">Menganalisis…</span>`;
     Recorder.stop();   // resolves the start() promise; START branch processes the clip
     return;
   }
@@ -470,7 +471,7 @@ async function doRecord(btn, purpose){
   if(busy) return;
   btn._idleLabel=btn._idleLabel||btn.querySelector('span:last-child').innerHTML;
   try{
-    if(purpose==='test'){ setStage('聆听中','listening','●',T('敲果身…','tap the fruit…')); }
+    if(purpose==='test'){ setStage('聆听中','listening','mendengar','●',T('敲果身…','tap the fruit…','ketuk buah…')); }
     const startPromise=Recorder.start(purpose==='test' ? {onKnock:evaluateKnock} : {});
     setRecUI(btn,'recording');
     // live elapsed counter in the button
@@ -478,22 +479,22 @@ async function doRecord(btn, purpose){
     recTimer=setInterval(()=>{
       const s=((Date.now()-t0)/1000).toFixed(1);
       const lab=btn.querySelector('span:last-child');
-      lab.innerHTML=`<span class="zh">敲击中 ${s}s · 按停止</span><span class="en">Tapping ${s}s · press stop</span>`;
-      if(purpose==='test') $('#stageSmall').textContent=T('敲果身… '+s+'s','tap… '+s+'s');
+      lab.innerHTML=`<span class="zh">敲击中 ${s}s · 按停止</span><span class="en">Tapping ${s}s · press stop</span><span class="ms">Mengetuk ${s}s · tekan henti</span>`;
+      if(purpose==='test') $('#stageSmall').textContent=T('敲果身… '+s+'s','tap… '+s+'s','ketuk… '+s+'s');
     },100);
 
     const clip=await startPromise;     // resolves when stop() is called (or safety cap)
     clearInterval(recTimer); recTimer=null;
     busy=true;
     setRecUI(btn,'idle');
-    if(clip.autoStopped) toast(T('已到录音上限，自动停止','Reached recording cap — stopped'),'');
-    else if(clip.tapCaptured) toast(T('已捕捉到一记敲击','Clean knock captured'),'');
+    if(clip.autoStopped) toast('已到录音上限，自动停止','Reached recording cap — stopped','Had rakaman dicapai — dihentikan');
+    else if(clip.tapCaptured) toast('已捕捉到一记敲击','Clean knock captured','Ketukan bersih dirakam');
     await processClip(btn, purpose, clip);
   }catch(err){
     clearInterval(recTimer); recTimer=null;
     Recorder.active=false;
-    toast(T('无法使用麦克风，请检查权限','Microphone unavailable — check permission'),'');
-    if(purpose==='test'){liveAnalyser.idle();setStage('待机','idle','—','');}
+    toast('无法使用麦克风，请检查权限','Microphone unavailable — check permission','Mikrofon tidak tersedia — semak kebenaran');
+    if(purpose==='test'){liveAnalyser.idle();setStage('待机','idle','sedia','—','');}
     setRecUI(btn,'idle');
   }finally{
     busy=false;
@@ -512,7 +513,7 @@ function evaluateKnock(clipSoFar, tapCount){
   if(m.tier==='hi') return true;                   // confident — done
   if(m.tier==='mid' && tapCount>=2) return true;   // moderate, and we've heard a couple — good enough
   if(tapCount>=4) return true;                      // stop waiting; show the best-effort read
-  toast(T('再敲一下取准…','Tap again to firm it up…'),'');
+  toast('再敲一下取准…','Tap again to firm it up…','Ketuk sekali lagi untuk pastikan…');
   return false;                                    // keep listening
 }
 
@@ -520,8 +521,8 @@ async function processClip(btn, purpose, clip){
   const feat=extractFeatures(clip);
   const sensOn=Math.max(SENS_MIN,Math.min(SENS_MAX, store.gain||SENS_DEF));
   if(!feat || feat.onsetStrength<0.004/sensOn){
-    toast(T('没听到清晰的敲击，再试一次','No clear tap detected — try again'),'');
-    if(purpose==='test'){liveAnalyser.idle();setStage('待机','idle','—','');}
+    toast('没听到清晰的敲击，再试一次','No clear tap detected — try again','Tiada ketukan jelas dikesan — cuba lagi');
+    if(purpose==='test'){liveAnalyser.idle();setStage('待机','idle','sedia','—','');}
     return;
   }
   if(purpose==='ref'){
@@ -530,7 +531,7 @@ async function processClip(btn, purpose, clip){
     store.refs.push({id:uid(),n,ts:Date.now(),tool,feat});
     store.tool=tool; save();
     renderRefs(); renderTestGate();
-    toast(T(`已存基准 #${n}`,`Saved reference #${n}`),'');
+    toast(`已存基准 #${n}`,`Saved reference #${n}`,`Rujukan #${n} disimpan`);
   }else{
     liveAnalyser.freeze(feat);
     showResult(feat);
@@ -542,29 +543,29 @@ function showResult(feat){
   const box=$('#testResult');
   const m=matchAgainstBaseline(feat);
   if(m.status!=='ok'){
-    setStage('样本不足','need more','—','');
-    box.innerHTML=`<div class="verdict lo"><div class="conf">${T('样本不足，暂不猜','Too few refs — not guessing')}</div>
-      <div class="why">${T(`只有 ${m.have} 颗基准，至少要 ${OFFER_MATCH_AT} 颗。`,`Only ${m.have} references; need ${OFFER_MATCH_AT}.`)}</div></div>`;
+    setStage('样本不足','need more','perlu lagi','—','');
+    box.innerHTML=`<div class="verdict lo"><div class="conf">${T('样本不足，暂不猜','Too few refs — not guessing','Rujukan terlalu sedikit — tidak meneka')}</div>
+      <div class="why">${T(`只有 ${m.have} 颗基准，至少要 ${OFFER_MATCH_AT} 颗。`,`Only ${m.have} references; need ${OFFER_MATCH_AT}.`,`Hanya ${m.have} rujukan; perlu ${OFFER_MATCH_AT}.`)}</div></div>`;
     return;
   }
-  const confWord=m.tier==='hi'?T('把握度：高','Confidence: high'):m.tier==='mid'?T('把握度：中','Confidence: moderate'):T('把握度：低','Confidence: low');
+  const confWord=m.tier==='hi'?T('把握度：高','Confidence: high','Keyakinan: tinggi'):m.tier==='mid'?T('把握度：中','Confidence: moderate','Keyakinan: sederhana'):T('把握度：低','Confidence: low','Keyakinan: rendah');
   const confCol=m.tier==='hi'?'var(--good)':m.tier==='mid'?'var(--warn)':'var(--ink-soft)';
-  setStage('结果','result',`${m.lo}–${m.hi}%`,T('接近落果','vs drop-fruit'));
+  setStage('结果','result','keputusan',`${m.lo}–${m.hi}%`,T('接近落果','vs drop-fruit','vs durian gugur'));
   let why;
   if(m.tier==='lo'){
-    why=T(`这次把握度低（基准 ${m.refs} 颗，信噪比 ${m.snr.toFixed(0)}dB）。可能是敲得不够干净、背景太吵，或基准还太少。建议换安静点重录、或多补几颗落果基准。别只凭这个数字决定 —— 割开、闻香、等落果才是定案。`,`Low confidence this time (${m.refs} refs, SNR ${m.snr.toFixed(0)}dB). The tap may be unclean, background too loud, or the baseline too small. Re-record somewhere quieter or add more drop-fruit refs. Don't decide on this number alone — cutting, aroma and natural drop are the real call.`);
+    why=T(`这次把握度低（基准 ${m.refs} 颗，信噪比 ${m.snr.toFixed(0)}dB）。可能是敲得不够干净、背景太吵，或基准还太少。建议换安静点重录、或多补几颗落果基准。别只凭这个数字决定 —— 割开、闻香、等落果才是定案。`,`Low confidence this time (${m.refs} refs, SNR ${m.snr.toFixed(0)}dB). The tap may be unclean, background too loud, or the baseline too small. Re-record somewhere quieter or add more drop-fruit refs. Don't decide on this number alone — cutting, aroma and natural drop are the real call.`,`Keyakinan rendah kali ini (${m.refs} rujukan, SNR ${m.snr.toFixed(0)}dB). Ketukan mungkin kurang bersih, bunyi latar terlalu bising, atau rujukan masih terlalu sedikit. Rakam semula di tempat yang lebih senyap atau tambah rujukan durian gugur. Jangan buat keputusan dengan angka ini sahaja — belah, bau dan gugur sendiri tetap penentu sebenar.`);
   }else if(m.tier==='mid'){
-    why=T(`中等把握（基准 ${m.refs} 颗）。这颗果的低频共振${m.center>=80?'比较接近':'还没很接近'}你的落果基准。多敲几下取一致的一下更稳。`,`Moderate confidence (${m.refs} refs). This fruit's low-frequency resonance is ${m.center>=80?'fairly close to':'not yet close to'} your drop-fruit baseline. A few consistent taps steady the read.`);
+    why=T(`中等把握（基准 ${m.refs} 颗）。这颗果的低频共振${m.center>=80?'比较接近':'还没很接近'}你的落果基准。多敲几下取一致的一下更稳。`,`Moderate confidence (${m.refs} refs). This fruit's low-frequency resonance is ${m.center>=80?'fairly close to':'not yet close to'} your drop-fruit baseline. A few consistent taps steady the read.`,`Keyakinan sederhana (${m.refs} rujukan). Resonans frekuensi rendah buah ini ${m.center>=80?'agak hampir dengan':'belum hampir dengan'} rujukan durian gugur anda. Beberapa ketukan yang konsisten memberi bacaan lebih stabil.`);
   }else{
-    why=T(`把握度高（基准 ${m.refs} 颗，信噪比好）。声音${m.center>=85?'很接近':'与'}落果基准${m.center>=85?'':'仍有距离'}。仍建议割一颗验证，把结果记进你的经验。`,`High confidence (${m.refs} refs, clean tap). The sound is ${m.center>=85?'very close to':'still some distance from'} your drop-fruit baseline. Still cut one to verify and bank the result.`);
+    why=T(`把握度高（基准 ${m.refs} 颗，信噪比好）。声音${m.center>=85?'很接近':'与'}落果基准${m.center>=85?'':'仍有距离'}。仍建议割一颗验证，把结果记进你的经验。`,`High confidence (${m.refs} refs, clean tap). The sound is ${m.center>=85?'very close to':'still some distance from'} your drop-fruit baseline. Still cut one to verify and bank the result.`,`Keyakinan tinggi (${m.refs} rujukan, ketukan bersih). Bunyinya ${m.center>=85?'sangat hampir dengan':'masih agak jauh daripada'} rujukan durian gugur anda. Tetap belah sebiji untuk mengesahkan dan catat hasilnya.`);
   }
   box.innerHTML=`<div class="verdict ${m.tier}">
     <div class="rng">${m.lo}–${m.hi}%</div>
     <div class="conf" style="color:${confCol}">${confWord}</div>
     <div class="why">${why}</div>
-    <div class="btnrow"><button class="btn" id="againBtn">${T('再敲一次','Tap again')}</button></div>
+    <div class="btnrow"><button class="btn" id="againBtn">${T('再敲一次','Tap again','Ketuk lagi')}</button></div>
   </div>`;
-  $('#againBtn').onclick=()=>{lastResultFeat=null;box.innerHTML='';liveAnalyser.idle();setStage('待机','idle','—','');};
+  $('#againBtn').onclick=()=>{lastResultFeat=null;box.innerHTML='';liveAnalyser.idle();setStage('待机','idle','sedia','—','');};
 }
 
 /* --- tabs / lang --- */
@@ -580,14 +581,18 @@ function initTabs(){
   if($('#'+saved))switchTab(saved);
 }
 function initLang(){
-  let en=false;try{en=localStorage.getItem('tsod_lang')==='en';}catch(e){}
-  document.body.classList.toggle('lang-en',en);
-  $('#langBtn').textContent=en?'中文':'EN';
-  $('#langBtn').onclick=()=>{
-    const now=!document.body.classList.contains('lang-en');
-    document.body.classList.toggle('lang-en',now);
-    $('#langBtn').textContent=now?'中文':'EN';
-    try{localStorage.setItem('tsod_lang',now?'en':'zh');}catch(e){}
+  const sel=$('#langBtn');
+  const apply=l=>{
+    LANGS.forEach(x=>document.body.classList.toggle('lang-'+x,x===l));
+    document.documentElement.lang=l==='zh'?'zh-Hans':l;
+    sel.value=l;
+  };
+  let saved='zh';try{saved=localStorage.getItem('tsod_lang')||'zh';}catch(e){}
+  apply(LANGS.includes(saved)?saved:'zh');
+  sel.onchange=()=>{
+    const l=LANGS.includes(sel.value)?sel.value:'zh';
+    apply(l);
+    try{localStorage.setItem('tsod_lang',l);}catch(e){}
     renderRefs();renderTestGate();
     if(lastResultFeat) showResult(lastResultFeat);   // keep the result card in the new language
   };
@@ -613,7 +618,7 @@ function init(){
   try{ if(store.tool && $('#refTool')) $('#refTool').value=store.tool; }catch(e){}
   try{ initSens(); }catch(e){ console.error('sens init',e); }
   try{ renderRefs(); renderTestGate(); }catch(e){ console.error('render',e); }
-  try{ liveAnalyser.init(); setStage('待机','idle','—',''); }catch(e){ console.error('canvas init',e); }
+  try{ liveAnalyser.init(); setStage('待机','idle','sedia','—',''); }catch(e){ console.error('canvas init',e); }
   try{ const v=$('#verLine'); if(v) v.textContent=CACHE_VERSION; }catch(e){}
 }
 // Run after the DOM is parsed. The script tag sits at end-of-body, but guard
@@ -635,10 +640,10 @@ if('serviceWorker' in navigator){
   function updToast(worker){
     if($('#updToast'))return;
     const t=document.createElement('div');t.id='updToast';t.className='toast show';t.style.cssText+='display:flex;gap:12px;align-items:center;bottom:22px;pointer-events:auto';
-    t.innerHTML=`<span>${T('有新版本','New version')}</span>`;
-    const b=document.createElement('button');b.textContent=T('更新','Update');
+    t.innerHTML=`<span>${T('有新版本','New version','Versi baharu tersedia')}</span>`;
+    const b=document.createElement('button');b.textContent=T('更新','Update','Kemas kini');
     b.style.cssText='border:none;background:var(--flesh);color:var(--shell);font-weight:800;border-radius:9px;padding:6px 12px;cursor:pointer';
-    b.onclick=()=>{b.textContent=T('更新中…','Updating…');worker.postMessage({type:'SKIP_WAITING'});};
+    b.onclick=()=>{b.textContent=T('更新中…','Updating…','Mengemas kini…');worker.postMessage({type:'SKIP_WAITING'});};
     t.appendChild(b);document.body.appendChild(t);
   }
   navigator.serviceWorker.register('sw.js').then(reg=>{

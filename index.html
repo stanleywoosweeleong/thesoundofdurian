@@ -40,8 +40,9 @@ body{
   line-height:1.5;-webkit-font-smoothing:antialiased;
   padding-bottom:env(safe-area-inset-bottom);
 }
-.lang-en .zh{display:none}
+.lang-en .zh,.lang-ms .zh{display:none}
 body:not(.lang-en) .en{display:none}
+body:not(.lang-ms) .ms{display:none}
 /* Chinese glyphs read small at Latin sizes — bump every visible .zh a notch. */
 .zh{font-size:1.12em;letter-spacing:.2px}
 
@@ -58,7 +59,9 @@ header{
 .brand h1{margin:0;font-size:16px;font-weight:800;letter-spacing:.3px;line-height:1.15}
 .brand .sub{font-size:10.5px;opacity:.72;font-weight:600;letter-spacing:.4px}
 .langbtn{flex:0 0 auto;border:1px solid rgba(246,239,223,.35);background:transparent;color:var(--cream);
-  font-size:12px;font-weight:800;border-radius:9px;padding:6px 10px;cursor:pointer}
+  font-size:12px;font-weight:800;border-radius:9px;padding:6px 8px;cursor:pointer;
+  font-family:inherit;-webkit-appearance:none;appearance:none;text-align:center;text-align-last:center;max-width:42vw}
+.langbtn option{color:#222;background:#fff}
 
 /* ---- tab bar ---- */
 nav.tabs{position:sticky;top:calc(env(safe-area-inset-top) + 56px);z-index:35;
@@ -173,16 +176,20 @@ footer{max-width:520px;margin:0 auto;padding:6px 16px 30px;text-align:center;fon
 <header>
   <div class="mark">🥁</div>
   <div class="brand">
-    <h1><span class="zh">敲榴莲</span><span class="en">The Sound of Durian</span></h1>
-    <div class="sub"><span class="zh">听声辨熟 · 田间实验</span><span class="en">Listen for ripeness · field lab</span></div>
+    <h1><span class="zh">敲榴莲</span><span class="en">The Sound of Durian</span><span class="ms">Bunyi Durian</span></h1>
+    <div class="sub"><span class="zh">听声辨熟 · 田间实验</span><span class="en">Listen for ripeness · field lab</span><span class="ms">Dengar kematangan · ujian kebun</span></div>
   </div>
-  <button class="langbtn" id="langBtn">EN</button>
+  <select class="langbtn" id="langBtn" aria-label="Language / 语言 / Bahasa">
+    <option value="zh">中文 ▾</option>
+    <option value="en">English ▾</option>
+    <option value="ms">Melayu ▾</option>
+  </select>
 </header>
 
 <nav class="tabs">
-  <button data-p="test" class="active"><span class="zh">敲一敲</span><span class="en">Tap a fruit</span></button>
-  <button data-p="refs"><span class="zh">基准库</span><span class="en">Baseline</span></button>
-  <button data-p="how"><span class="zh">怎么用</span><span class="en">How</span></button>
+  <button data-p="test" class="active"><span class="zh">敲一敲</span><span class="en">Tap a fruit</span><span class="ms">Ketuk buah</span></button>
+  <button data-p="refs"><span class="zh">基准库</span><span class="en">Baseline</span><span class="ms">Rujukan</span></button>
+  <button data-p="how"><span class="zh">怎么用</span><span class="en">How</span><span class="ms">Cara guna</span></button>
 </nav>
 
 <main>
@@ -190,7 +197,7 @@ footer{max-width:520px;margin:0 auto;padding:6px 16px 30px;text-align:center;fon
   <section class="panel active" id="test">
     <div class="stage">
       <canvas id="stageCanvas"></canvas>
-      <div class="stage-tag" id="stageTag"><span class="zh">待机</span><span class="en">idle</span></div>
+      <div class="stage-tag" id="stageTag"><span class="zh">待机</span><span class="en">idle</span><span class="ms">sedia</span></div>
       <div class="stage-read">
         <div class="big" id="stageBig">—</div>
         <div class="small" id="stageSmall"></div>
@@ -199,30 +206,30 @@ footer{max-width:520px;margin:0 auto;padding:6px 16px 30px;text-align:center;fon
 
     <div id="testGate"></div>
 
-    <button class="rec" id="recBtn"><span class="dot"></span><span id="recLabel"><span class="zh">开始录音</span><span class="en">Start recording</span></span></button>
+    <button class="rec" id="recBtn"><span class="dot"></span><span id="recLabel"><span class="zh">开始录音</span><span class="en">Start recording</span><span class="ms">Mula rakam</span></span></button>
     <div id="testResult"></div>
 
     <div class="sens">
-      <label for="sensRange"><span class="zh">敲击灵敏度</span><span class="en">Tap sensitivity</span> · <span class="zh" style="font-weight:600">敲得越轻，调越高</span><span class="en" style="font-weight:600">tap softer → set higher</span><b id="sensVal">3×</b></label>
+      <label for="sensRange"><span class="zh">敲击灵敏度</span><span class="en">Tap sensitivity</span><span class="ms">Kepekaan ketukan</span> · <span class="zh" style="font-weight:600">敲得越轻，调越高</span><span class="en" style="font-weight:600">tap softer → set higher</span><span class="ms" style="font-weight:600">ketuk perlahan → naikkan</span><b id="sensVal">3×</b></label>
       <input id="sensRange" type="range" min="1" max="8" step="1" value="3">
-      <div class="ends"><span class="zh">要用力敲</span><span class="en">firm taps</span><span class="zh">轻敲即可</span><span class="en">gentle taps</span></div>
+      <div class="ends"><span class="zh">要用力敲</span><span class="en">firm taps</span><span class="ms">perlu ketuk kuat</span><span class="zh">轻敲即可</span><span class="en">gentle taps</span><span class="ms">ketuk perlahan pun boleh</span></div>
     </div>
   </section>
 
   <!-- ============ BASELINE LIBRARY ============ -->
   <section class="panel" id="refs">
     <div class="card">
-      <h2><span class="zh">自然落果基准库</span><span class="en">Natural-drop baseline</span></h2>
-      <p class="lede"><span class="zh">用你自己树上<b>自然落果</b>的榴莲当「100% 熟」的声音基准。目标 10 颗，越多越准。</span><span class="en">Use your own <b>naturally-dropped</b> durians as the "100% ripe" sound baseline. Aim for 10 — more is steadier.</span></p>
+      <h2><span class="zh">自然落果基准库</span><span class="en">Natural-drop baseline</span><span class="ms">Rujukan durian gugur</span></h2>
+      <p class="lede"><span class="zh">用你自己树上<b>自然落果</b>的榴莲当「100% 熟」的声音基准。目标 10 颗，越多越准。</span><span class="en">Use your own <b>naturally-dropped</b> durians as the "100% ripe" sound baseline. Aim for 10 — more is steadier.</span><span class="ms">Gunakan durian dari pokok anda sendiri yang <b>gugur sendiri</b> sebagai rujukan bunyi "100% masak". Sasaran 10 biji — lebih banyak, lebih stabil.</span></p>
       <div class="refbar" id="refPips"></div>
       <div id="refStatus" class="note"></div>
       <div class="hr"></div>
       <div class="field">
-        <label for="refTool"><span class="zh">敲击用的硬物（保持一致）</span><span class="en">Object you tap with (keep consistent)</span></label>
-        <input id="refTool" placeholder="e.g. 汤匙柄 / spoon handle" autocomplete="off">
+        <label for="refTool"><span class="zh">敲击用的硬物（保持一致）</span><span class="en">Object you tap with (keep consistent)</span><span class="ms">Benda keras untuk mengetuk (guna yang sama)</span></label>
+        <input id="refTool" placeholder="汤匙柄 / spoon handle / hulu sudu" autocomplete="off">
       </div>
-      <button class="rec" id="refRecBtn"><span class="dot"></span><span><span class="zh">开始录一颗落果基准</span><span class="en">Start recording a reference</span></span></button>
-      <div class="note" style="text-align:center;margin-top:8px"><span class="zh">按「开始」→ 敲这颗落果。听到干净一击后会<b>自动停止</b>并存入，也可按「停止」。凑够 10 颗后仍可用同一按钮继续加录，越多越准。</span><span class="en">Press Start → tap this dropped fruit. It <b>auto-stops</b> and saves after a clean knock — or press Stop. You can keep adding beyond 10 with the same button; more is steadier.</span></div>
+      <button class="rec" id="refRecBtn"><span class="dot"></span><span><span class="zh">开始录一颗落果基准</span><span class="en">Start recording a reference</span><span class="ms">Mula rakam satu rujukan</span></span></button>
+      <div class="note" style="text-align:center;margin-top:8px"><span class="zh">按「开始」→ 敲这颗落果。听到干净一击后会<b>自动停止</b>并存入，也可按「停止」。凑够 10 颗后仍可用同一按钮继续加录，越多越准。</span><span class="en">Press Start → tap this dropped fruit. It <b>auto-stops</b> and saves after a clean knock — or press Stop. You can keep adding beyond 10 with the same button; more is steadier.</span><span class="ms">Tekan Mula → ketuk durian gugur ini. Rakaman <b>berhenti sendiri</b> dan disimpan selepas satu ketukan bersih — atau tekan Henti. Selepas cukup 10 biji, anda masih boleh menambah dengan butang yang sama; lebih banyak, lebih stabil.</span></div>
       <div class="reflist" id="refList"></div>
     </div>
   </section>
@@ -230,15 +237,15 @@ footer{max-width:520px;margin:0 auto;padding:6px 16px 30px;text-align:center;fon
   <!-- ============ HOW ============ -->
   <section class="panel" id="how">
     <div class="card">
-      <h2><span class="zh">怎么用</span><span class="en">How it works</span></h2>
-      <div class="step"><div class="n">1</div><div class="b"><span class="zh"><b>收集基准。</b>拿 10 颗<b>自然落果</b>（= 100% 树熟）的榴莲，用同一件硬物各敲几下录进「基准库」。这就是你这片园、这个品种「熟」的声音。</span><span class="en"><b>Collect the baseline.</b> Take 10 <b>naturally-dropped</b> durians (= 100% tree-ripe), tap each with the same hard object, and record them into the Baseline. That's what "ripe" sounds like on your trees.</span></div></div>
-      <div class="step"><div class="n">2</div><div class="b"><span class="zh"><b>敲树上的果。</b>按「开始录音」空出双手，用同一件硬物敲一颗还没落的果几下。工具会边听边判断，<b>够把握时自动停止</b>给出结果，也可手动按「停止」。</span><span class="en"><b>Tap a fruit on the tree.</b> Press Start to free both hands and tap a fruit that hasn't dropped a few times with the same object. It judges as it listens and <b>auto-stops once confident</b> — or press Stop yourself.</span></div></div>
-      <div class="step"><div class="n">3</div><div class="b"><span class="zh"><b>看接近度。</b>工具只截取敲击后那一下的<b>低频共振</b>（果肉/空腔的声音），和落果基准比对，给出「接近成熟约 X–Y%」加一个<b>把握度</b>。</span><span class="en"><b>Read the closeness.</b> The tool isolates only the <b>low-frequency resonance</b> right after the hit (the flesh/cavity sound), compares it to the drop-fruit baseline, and gives "≈ X–Y% toward ripe" plus a <b>confidence</b>.</span></div></div>
-      <div class="disclaim"><span class="zh"><b>诚实声明：</b>这是一个<b>田间实验工具</b>，不是实验室。它拿你自己的落果当唯一真相 —— 声音接近落果，就更可能熟。它<b>不测</b>干物质或糖度，背景噪音和敲法不一致都会降低把握度。把握度低时它会直说「不确定」，而不是编一个漂亮的数字。真正的定案，仍靠割开看、闻香、看落果。</span><span class="en"><b>Honest note:</b> this is a <b>field-experiment tool</b>, not a lab. It treats your own drop-fruit as the only ground truth — a sound close to drop-fruit is more likely ripe. It does <b>not</b> measure dry matter or sugar; noise and inconsistent tapping lower confidence. When confidence is low it says "unsure" rather than inventing a clean number. The real call still comes from cutting, aroma, and natural drop.</span></div>
+      <h2><span class="zh">怎么用</span><span class="en">How it works</span><span class="ms">Cara guna</span></h2>
+      <div class="step"><div class="n">1</div><div class="b"><span class="zh"><b>收集基准。</b>拿 10 颗<b>自然落果</b>（= 100% 树熟）的榴莲，用同一件硬物各敲几下录进「基准库」。这就是你这片园、这个品种「熟」的声音。</span><span class="en"><b>Collect the baseline.</b> Take 10 <b>naturally-dropped</b> durians (= 100% tree-ripe), tap each with the same hard object, and record them into the Baseline. That's what "ripe" sounds like on your trees.</span><span class="ms"><b>Kumpul rujukan.</b> Ambil 10 biji durian yang <b>gugur sendiri</b> (= 100% masak di pokok), ketuk setiap biji dengan benda keras yang sama, dan rakam ke dalam Rujukan. Itulah bunyi "masak" bagi kebun dan jenis durian anda.</span></div></div>
+      <div class="step"><div class="n">2</div><div class="b"><span class="zh"><b>敲树上的果。</b>按「开始录音」空出双手，用同一件硬物敲一颗还没落的果几下。工具会边听边判断，<b>够把握时自动停止</b>给出结果，也可手动按「停止」。</span><span class="en"><b>Tap a fruit on the tree.</b> Press Start to free both hands and tap a fruit that hasn't dropped a few times with the same object. It judges as it listens and <b>auto-stops once confident</b> — or press Stop yourself.</span><span class="ms"><b>Ketuk buah di pokok.</b> Tekan Mula supaya kedua-dua tangan bebas, kemudian ketuk buah yang belum gugur beberapa kali dengan benda yang sama. Alat ini menilai sambil mendengar dan <b>berhenti sendiri apabila cukup yakin</b> — atau tekan Henti sendiri.</span></div></div>
+      <div class="step"><div class="n">3</div><div class="b"><span class="zh"><b>看接近度。</b>工具只截取敲击后那一下的<b>低频共振</b>（果肉/空腔的声音），和落果基准比对，给出「接近成熟约 X–Y%」加一个<b>把握度</b>。</span><span class="en"><b>Read the closeness.</b> The tool isolates only the <b>low-frequency resonance</b> right after the hit (the flesh/cavity sound), compares it to the drop-fruit baseline, and gives "≈ X–Y% toward ripe" plus a <b>confidence</b>.</span><span class="ms"><b>Baca tahap kehampiran.</b> Alat ini hanya mengambil <b>resonans frekuensi rendah</b> sejurus selepas ketukan (bunyi isi/rongga buah), membandingkannya dengan rujukan durian gugur, dan memberi "≈ X–Y% menghampiri masak" bersama satu <b>tahap keyakinan</b>.</span></div></div>
+      <div class="disclaim"><span class="zh"><b>诚实声明：</b>这是一个<b>田间实验工具</b>，不是实验室。它拿你自己的落果当唯一真相 —— 声音接近落果，就更可能熟。它<b>不测</b>干物质或糖度，背景噪音和敲法不一致都会降低把握度。把握度低时它会直说「不确定」，而不是编一个漂亮的数字。真正的定案，仍靠割开看、闻香、看落果。</span><span class="en"><b>Honest note:</b> this is a <b>field-experiment tool</b>, not a lab. It treats your own drop-fruit as the only ground truth — a sound close to drop-fruit is more likely ripe. It does <b>not</b> measure dry matter or sugar; noise and inconsistent tapping lower confidence. When confidence is low it says "unsure" rather than inventing a clean number. The real call still comes from cutting, aroma, and natural drop.</span><span class="ms"><b>Nota jujur:</b> ini ialah <b>alat ujian kebun</b>, bukan makmal. Ia menganggap durian gugur anda sendiri sebagai satu-satunya kebenaran — bunyi yang hampir dengan durian gugur lebih berkemungkinan masak. Ia <b>tidak</b> mengukur bahan kering atau kemanisan; bunyi bising dan cara ketukan yang tidak konsisten menurunkan keyakinan. Apabila keyakinan rendah, ia berterus terang mengatakan "tidak pasti" dan tidak mereka-reka angka yang cantik. Keputusan sebenar tetap datang daripada membelah buah, bau, dan gugur sendiri.</span></div>
     </div>
     <div class="card">
-      <h2><span class="zh">为什么能剔除鸟叫</span><span class="en">Why birdsong is filtered</span></h2>
-      <p class="note"><span class="zh">敲击是一记又短又猛的脆响，果身的成熟信息藏在<b>低频</b>（熟果偏闷、偏低；生果偏紧、偏高）。鸟叫是持续的<b>高频</b>。工具只分析敲击后约 250 毫秒的低频段，所以大部分鸟叫、风声会被自动忽略 —— 但一辆摩托或一声喊叫仍会干扰，这时把握度会自动降低，你可以重录。</span><span class="en">A tap is a short, sharp transient, and ripeness lives in the <b>low frequencies</b> (ripe = duller/lower, unripe = tighter/higher). Birdsong is continuous and <b>high</b>. The tool analyses only the low band in the ~250ms after the hit, so most birds and wind are ignored — but a motorbike or a shout still intrudes, which simply lowers confidence, and you can re-record.</span></p>
+      <h2><span class="zh">为什么能剔除鸟叫</span><span class="en">Why birdsong is filtered</span><span class="ms">Mengapa kicauan burung ditapis</span></h2>
+      <p class="note"><span class="zh">敲击是一记又短又猛的脆响，果身的成熟信息藏在<b>低频</b>（熟果偏闷、偏低；生果偏紧、偏高）。鸟叫是持续的<b>高频</b>。工具只分析敲击后约 250 毫秒的低频段，所以大部分鸟叫、风声会被自动忽略 —— 但一辆摩托或一声喊叫仍会干扰，这时把握度会自动降低，你可以重录。</span><span class="en">A tap is a short, sharp transient, and ripeness lives in the <b>low frequencies</b> (ripe = duller/lower, unripe = tighter/higher). Birdsong is continuous and <b>high</b>. The tool analyses only the low band in the ~250ms after the hit, so most birds and wind are ignored — but a motorbike or a shout still intrudes, which simply lowers confidence, and you can re-record.</span><span class="ms">Ketukan ialah bunyi yang pendek dan tajam, dan maklumat kematangan terletak pada <b>frekuensi rendah</b> (masak = lebih pekak/rendah, mentah = lebih tegang/tinggi). Kicauan burung berterusan dan <b>berfrekuensi tinggi</b>. Alat ini hanya menganalisis jalur rendah dalam kira-kira 250ms selepas ketukan, jadi kebanyakan bunyi burung dan angin diabaikan — tetapi motosikal atau jeritan masih mengganggu; keyakinan akan turun dengan sendirinya dan anda boleh rakam semula.</span></p>
     </div>
   </section>
 </main>

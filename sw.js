@@ -1,4 +1,4 @@
-const CACHE='tsod-20260710-11';
+const CACHE='tsod-20260710-12';
 const ASSETS=['./','./index.html','./app.js','./manifest.json',
   './icon-192.png','./icon-512.png','./icon-180.png',
   './icon-maskable-512.png','./favicon-32.png'];
