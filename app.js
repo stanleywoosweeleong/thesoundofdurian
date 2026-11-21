@@ -634,7 +634,7 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshing)return;refreshing=true;location.reload();});
   function updToast(worker){
     if($('#updToast'))return;
-    const t=document.createElement('div');t.id='updToast';t.className='toast show';t.style.cssText+='display:flex;gap:12px;align-items:center;bottom:22px';
+    const t=document.createElement('div');t.id='updToast';t.className='toast show';t.style.cssText+='display:flex;gap:12px;align-items:center;bottom:22px;pointer-events:auto';
     t.innerHTML=`<span>${T('有新版本','New version')}</span>`;
     const b=document.createElement('button');b.textContent=T('更新','Update');
     b.style.cssText='border:none;background:var(--flesh);color:var(--shell);font-weight:800;border-radius:9px;padding:6px 12px;cursor:pointer';
