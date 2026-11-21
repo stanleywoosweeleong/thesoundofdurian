@@ -585,7 +585,7 @@ function initLang(){
   const apply=l=>{
     LANGS.forEach(x=>document.body.classList.toggle('lang-'+x,x===l));
     document.documentElement.lang=HTML_LANG[l];
-    sel.value=l;
+    $$('button',sel).forEach(b=>{const on=b.dataset.l===l;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
   };
   // The one place a language choice is saved. Saves even when the choice equals
   // what is already showing, so picking the default on first launch sticks.
@@ -608,7 +608,7 @@ function initLang(){
   let saved=null;try{saved=localStorage.getItem('tsod_lang');}catch(e){}
   const firstLaunch=!LANGS.includes(saved);   // nothing valid saved → ask first
   apply(firstLaunch?'zh':saved);
-  sel.onchange=()=>{ if(!setLang(sel.value)) sel.value=curLang(); };
+  sel.onclick=e=>{ const b=e.target.closest('[data-l]'); if(b) setLang(b.dataset.l); };
   pick.onclick=e=>{
     const b=e.target.closest('[data-lang]');
     if(b&&setLang(b.dataset.lang)){ showPick(false); window.scrollTo(0,0); }
