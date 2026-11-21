@@ -134,6 +134,8 @@ main{max-width:520px;margin:0 auto;padding:16px 15px 40px}
 .verdict .conf{font-size:12.5px;font-weight:700;margin-top:4px}
 .verdict .why{font-size:11.5px;color:var(--ink-soft);margin-top:9px;line-height:1.5}
 
+.sametool{margin:0 0 11px;font-size:12.5px;font-weight:600;color:var(--ink);text-align:center}
+.sametool b{color:var(--shell)}
 .field{margin-bottom:11px}
 .field label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);margin-bottom:4px}
 .field input,.field select{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;
@@ -251,10 +253,7 @@ body.picking{overflow:hidden}
       <div class="refbar" id="refPips"></div>
       <div id="refStatus" class="note"></div>
       <div class="hr"></div>
-      <div class="field">
-        <label for="refTool"><span class="zh">敲击用的硬物（保持一致）</span><span class="en">Object you tap with (keep consistent)</span><span class="ms">Benda keras untuk mengetuk (guna yang sama)</span></label>
-        <input id="refTool" placeholder="汤匙柄 / spoon handle / hulu sudu" autocomplete="off">
-      </div>
+      <p class="sametool"><span class="zh">每次都用<b>同一件硬物</b>敲，例如汤匙柄。</span><span class="en">Always tap with the <b>same hard object</b>, e.g. a spoon handle.</span><span class="ms">Sentiasa ketuk dengan <b>benda keras yang sama</b>, contohnya hulu sudu.</span></p>
       <button class="rec" id="refRecBtn"><span class="dot"></span><span><span class="zh">开始录一颗落果基准</span><span class="en">Start recording a reference</span><span class="ms">Mula rakam satu rujukan</span></span></button>
       <div class="note" style="text-align:center;margin-top:8px"><span class="zh">按「开始」→ 敲这颗落果。听到干净一击后会<b>自动停止</b>并存入，也可按「停止」。凑够 10 颗后仍可用同一按钮继续加录，越多越准。</span><span class="en">Press Start → tap this dropped fruit. It <b>auto-stops</b> and saves after a clean knock — or press Stop. You can keep adding beyond 10 with the same button; more is steadier.</span><span class="ms">Tekan Mula → ketuk durian gugur ini. Rakaman <b>berhenti sendiri</b> dan disimpan selepas satu ketukan bersih — atau tekan Henti. Selepas cukup 10 biji, anda masih boleh menambah dengan butang yang sama; lebih banyak, lebih stabil.</span></div>
       <div class="reflist" id="refList"></div>

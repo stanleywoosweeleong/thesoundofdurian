@@ -526,9 +526,8 @@ async function processClip(btn, purpose, clip){
   }
   if(purpose==='ref'){
     const n=(store.refs.reduce((m,r)=>Math.max(m,r.n),0))+1;
-    const tool=($('#refTool').value||store.tool||'').trim();
-    store.refs.push({id:uid(),n,ts:Date.now(),tool,feat});
-    store.tool=tool; save();
+    store.refs.push({id:uid(),n,ts:Date.now(),feat});
+    save();
     renderRefs(); renderTestGate();
     toast(`已存基准 #${n}`,`Saved reference #${n}`,`Rujukan #${n} disimpan`);
   }else{
@@ -657,7 +656,6 @@ function init(){
     const rb=$('#recBtn'); if(rb) rb.onclick=()=>doRecord(rb,'test');
     const fb=$('#refRecBtn'); if(fb) fb.onclick=()=>doRecord(fb,'ref');
   }catch(e){ console.error('rec wiring',e); }
-  try{ if(store.tool && $('#refTool')) $('#refTool').value=store.tool; }catch(e){}
   try{ initSens(); }catch(e){ console.error('sens init',e); }
   try{ initShare(); }catch(e){ console.error('share init',e); }
   try{ renderRefs(); renderTestGate(); }catch(e){ console.error('render',e); }
