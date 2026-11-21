@@ -32,6 +32,10 @@ load();
 const LOW_LO=80, LOW_HI=1200;   // fruit-body resonance band (Hz). Birds/wind sit above.
 const WIN_MS=250;               // analysis window after the onset
 const NBANDS=24;                // compact log-spaced envelope resolution
+const MIN_PRE_MS=60;            // ambient audio required before an onset, to measure a real noise floor
+const TAP_PREROLL_MS=200;       // ambient kept in front of each knock when it is judged on its own
+const MIN_RISE=2;               // the knock's first 20ms must be at least 2x (6 dB) louder than the ambient before it
+const MIN_DECAY=0.1;           // a knock must die away within its window; steady sound stays near 0
 
 let audioCtx=null;
 function ac(){audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();return audioCtx;}
@@ -41,7 +45,7 @@ function ac(){audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioCon
    down / hold the fruit, tap it with a hard object using both hands free, then
    press again to stop. Returns the captured mono Float32 clip. */
 const Recorder={
-  active:false, _stream:null, _src:null, _proc:null, _chunks:[], _frames:0,
+  active:false, starting:false, _stream:null, _src:null, _proc:null, _chunks:[], _frames:0,
   _resolve:null, _capMs:15000, _startedAt:0, _autoTimer:null,
   _persistStream:null, _releaseTimer:null,
   // Acquire the mic once and REUSE it across taps. iOS standalone PWAs re-prompt on
@@ -59,11 +63,18 @@ const Recorder={
     this._persistStream=null;
   },
   async start(opts){
-    if(this.active) return;
+    // `starting` covers the gap while the mic permission prompt is open: `active`
+    // only turns true once audio is flowing, so without it a second press during
+    // the prompt would build a second, orphaned session.
+    if(this.active||this.starting) return null;
+    this.starting=true;
     const autoCapture = !opts || opts.autoCapture!==false;
     clearTimeout(this._releaseTimer); this._releaseTimer=null;   // cancel any pending mic release
-    this._stream=await this._getStream();                        // reuse the live mic stream if we have one
-    const ctx=ac(); if(ctx.state==='suspended') await ctx.resume();
+    let ctx;
+    try{
+      this._stream=await this._getStream();                      // reuse the live mic stream if we have one
+      ctx=ac(); if(ctx.state==='suspended') await ctx.resume();
+    }catch(err){ this.starting=false; throw err; }
     this._src=ctx.createMediaStreamSource(this._stream);
     this._proc=ctx.createScriptProcessor(2048,1,1);
     this._chunks=[]; this._frames=0; this._sr=ctx.sampleRate; this._startedAt=Date.now();
@@ -76,6 +87,9 @@ const Recorder={
     this._onKnock=(opts&&opts.onKnock)||null;   // confidence gate; null = stop on first clean knock
     this._floor=0; this._floorInit=false; this._tapDetected=false; this._captureUntilFrame=0; this._tapCount=0;
     const postFrames=Math.ceil(ctx.sampleRate*(WIN_MS+90)/1000);
+    const minPreFrames=Math.ceil(ctx.sampleRate*MIN_PRE_MS/1000);   // ambient needed before a knock can count
+    const preRollFrames=Math.ceil(ctx.sampleRate*TAP_PREROLL_MS/1000);
+    this._tapStartFrame=0;
     // Tap sensitivity (soft-tap gain): a higher setting lowers both the absolute knock
     // floor and how far a tap must rise above ambient, so a gentle tap still registers —
     // far less fatigue over a full day. Match accuracy is unaffected: loudness is
@@ -84,6 +98,10 @@ const Recorder={
     const absMin=ONSET_ABS/sens;
     const ratio=Math.max(1.8, 3.5-(sens-1)*0.25);
     const buildClip=()=>{ const out=new Float32Array(this._frames); let o=0; for(const c of this._chunks){out.set(c,o);o+=c.length;} return out; };
+    // Just the newest knock: a little ambient before it, then its decay window. Each
+    // knock is judged on its own audio, so an early loud-but-poor tap can't keep
+    // winning over the cleaner taps that follow it.
+    const buildTapClip=()=>buildClip().subarray(Math.max(0,this._tapStartFrame-preRollFrames));
     liveAnalyser.attach(this._src,ctx);
     this._proc.onaudioprocess=(e)=>{
       const d=e.inputBuffer.getChannelData(0);
@@ -93,8 +111,10 @@ const Recorder={
         const rms=Math.sqrt(e2/d.length);
         if(!this._floorInit){ this._floor=rms+1e-6; this._floorInit=true; }
         else if(rms < this._floor*2){ this._floor=this._floor*0.9+rms*0.1; } // adapt on quiet frames only
-        if(this._floorInit && rms>absMin && rms>this._floor*ratio){ // knock: clears the sensitivity-scaled floor AND rises above ambient
+        const framesBefore=this._frames-d.length;
+        if(framesBefore>=minPreFrames && rms>absMin && rms>this._floor*ratio){ // knock: enough ambient heard first, clears the sensitivity-scaled floor AND rises above ambient
           this._tapDetected=true;
+          this._tapStartFrame=framesBefore;
           this._captureUntilFrame=this._frames+postFrames;        // let the decay window fill, then judge
         }
       }
@@ -104,14 +124,14 @@ const Recorder={
         // baseline recording) means "one clean knock is enough". A confidence-driven
         // caller can keep us listening for a cleaner / closer knock.
         let done=true;
-        if(this._onKnock){ try{ done=!!this._onKnock(buildClip(), this._tapCount); }catch(_){ done=true; } }
+        if(this._onKnock){ try{ done=!!this._onKnock(buildTapClip(), this._tapCount); }catch(_){ done=true; } }
         if(done){ this.stop(false); return; }
         this._tapDetected=false;   // not confident yet — keep listening
       }
       if(this._frames>=capFrames) this.stop(true); // safety auto-stop
     };
     this._src.connect(this._proc); this._proc.connect(ctx.destination);
-    this.active=true;
+    this.active=true; this.starting=false;
     // safety timeout as well (in case audio thread stalls)
     this._autoTimer=setTimeout(()=>{ if(this.active) this.stop(true); }, this._capMs+500);
     return new Promise((res)=>{ this._resolve=res; });
@@ -143,8 +163,13 @@ const Recorder={
 function findBestOnset(x, sr){
   const win=256, hop=128;
   const need = sr ? Math.floor(sr*WIN_MS/1000) : 0; // samples an analysis window needs after the onset
-  let prev=1e-9, best=0, bestIdx=0, bestFull=0, bestFullIdx=-1;
-  for(let i=0;i+win<x.length;i+=hop){
+  // A rise is measured against the window before it, so the very first window is
+  // only the starting level, never an onset — otherwise sound that is already
+  // playing when recording starts looks like a huge jump from silence.
+  if(x.length<=win) return {idx:0, strength:0};
+  let prev=0; for(let j=0;j<win;j++){const v=x[j];prev+=v*v;} prev=Math.sqrt(prev/win);
+  let best=0, bestIdx=0, bestFull=0, bestFullIdx=-1;
+  for(let i=hop;i+win<x.length;i+=hop){
     let e=0; for(let j=0;j<win;j++){const v=x[i+j];e+=v*v;}
     e=Math.sqrt(e/win);
     const rise=e-prev;
@@ -158,13 +183,19 @@ function findBestOnset(x, sr){
 
 /* Peak absolute amplitude & rough noise floor (pre-onset RMS) for quality/SNR. */
 function signalQuality(x,onsetIdx,sr){
-  let peak=1e-9; for(let i=0;i<x.length;i++){const a=Math.abs(x[i]);if(a>peak)peak=a;}
+  // peak of THIS knock (its analysis window), not of some other tap in the clip
+  const end=Math.min(x.length,onsetIdx+Math.floor(sr*WIN_MS/1000));
+  let peak=1e-9; for(let i=onsetIdx;i<end;i++){const a=Math.abs(x[i]);if(a>peak)peak=a;}
   // noise floor = RMS of the 120ms BEFORE the onset (ambient: birds, wind)
   const pre0=Math.max(0,onsetIdx-Math.floor(sr*0.12));
   let nf=0,n=0; for(let i=pre0;i<onsetIdx;i++){nf+=x[i]*x[i];n++;}
   nf=Math.sqrt(nf/Math.max(1,n))+1e-9;
   const snr=20*Math.log10(peak/nf); // dB
-  return {peak, snr};
+  // level jump at the onset: RMS of the first 20ms of the knock vs the ambient RMS
+  const hitEnd=Math.min(x.length,onsetIdx+Math.floor(sr*0.02));
+  let he=0,hn=0; for(let i=onsetIdx;i<hitEnd;i++){he+=x[i]*x[i];hn++;}
+  const rise=Math.sqrt(he/Math.max(1,hn))/nf;
+  return {peak, snr, rise, preMs:1000*n/sr};
 }
 
 /* Hann-windowed DFT magnitude over the low band only, returned as a log-spaced,
@@ -214,11 +245,20 @@ function extractFeatures(clip){
   const {samples:x, sampleRate:sr}=clip;
   const on=findBestOnset(x, sr);
   const q=signalQuality(x,on.idx,sr);
+  // Without real ambient audio before the onset there is no noise floor to judge
+  // against, and the SNR would be a meaningless huge number.
+  if(q.preMs<MIN_PRE_MS) return null;
+  // ...and the level must genuinely jump at the onset, not just wobble.
+  if(q.rise<MIN_RISE) return null;
   const lb=lowBandEnvelope(x,on.idx,sr);
   if(!lb) return null;
+  // A knock is a transient: it rises and then dies away inside the window. Sound
+  // that switches on and stays (a tone, an engine) does not decay, so it is not a tap.
+  const decay=decayRate(x,on.idx,sr);
+  if(decay<MIN_DECAY) return null;
   return {
     env:lb.env, centroid:lb.centroid, peakFreq:lb.peakFreq,
-    decay:decayRate(x,on.idx,sr),
+    decay,
     snr:q.snr, onsetStrength:on.strength, sr
   };
 }
@@ -467,8 +507,9 @@ async function doRecord(btn, purpose){
   }
 
   // ---- START branch: begin a hands-free session ----
-  if(busy) return;
+  if(busy||Recorder.starting) return;   // `starting`: mic permission prompt still open
   btn._idleLabel=btn._idleLabel||btn.querySelector('span:last-child').innerHTML;
+  knockReads=[]; knockPick=null;
   try{
     if(purpose==='test'){ setStage('聆听中','listening','mendengar','●',T('敲果身…','tap the fruit…','ketuk buah…')); }
     const startPromise=Recorder.start(purpose==='test' ? {onKnock:evaluateKnock} : {});
@@ -484,6 +525,7 @@ async function doRecord(btn, purpose){
 
     const clip=await startPromise;     // resolves when stop() is called (or safety cap)
     clearInterval(recTimer); recTimer=null;
+    if(!clip){ setRecUI(btn,'idle'); return; }   // recorder refused to start a second session
     busy=true;
     setRecUI(btn,'idle');
     if(clip.autoStopped) toast('已到录音上限，自动停止','Reached recording cap — stopped','Had rakaman dicapai — dihentikan');
@@ -504,20 +546,33 @@ async function doRecord(btn, purpose){
    the audio so far and test the match. Return true to STOP (we have a trustworthy
    read), false to keep listening for a cleaner / closer knock. Ceiling at 4 taps so
    the session always ends; manual Stop and the 15s cap remain backstops. */
-function evaluateKnock(clipSoFar, tapCount){
-  let feat; try{ feat=extractFeatures({samples:clipSoFar, sampleRate:Recorder._sr}); }catch(e){ return true; }
+let knockReads=[];   // features of each knock heard this session, each judged on its own audio
+let knockPick=null;  // the knock that satisfied the stop rule, if one did
+function evaluateKnock(tapClip, tapCount){
+  let feat; try{ feat=extractFeatures({samples:tapClip, sampleRate:Recorder._sr}); }catch(e){ return true; }
   if(!feat) return false;                          // no clear tap yet — keep listening
+  knockReads.push(feat);
   const m=matchAgainstBaseline(feat);
-  if(m.status!=='ok') return true;                 // baseline too thin to decide — stop & show the gate
-  if(m.tier==='hi') return true;                   // confident — done
-  if(m.tier==='mid' && tapCount>=2) return true;   // moderate, and we've heard a couple — good enough
+  if(m.status!=='ok'){ knockPick=feat; return true; }                 // baseline too thin to decide — stop & show the gate
+  if(m.tier==='hi'){ knockPick=feat; return true; }                   // confident — done
+  if(m.tier==='mid' && tapCount>=2){ knockPick=feat; return true; }   // moderate, and we've heard a couple — good enough
   if(tapCount>=4) return true;                      // stop waiting; show the best-effort read
   toast('再敲一下取准…','Tap again to firm it up…','Ketuk sekali lagi untuk pastikan…');
   return false;                                    // keep listening
 }
 
+/* Which knock to report for a test. The knock that satisfied the stop rule wins.
+   If none did (tap ceiling, manual Stop, 15s cap) report the CLEANEST knock by
+   SNR — a quality measure that doesn't lean toward "sounds ripe". Only when no
+   knock was judged live do we fall back to scanning the whole clip. */
+function pickTestFeat(clip){
+  if(knockPick) return knockPick;
+  if(knockReads.length) return knockReads.reduce((a,b)=>b.snr>a.snr?b:a);
+  return extractFeatures(clip);
+}
+
 async function processClip(btn, purpose, clip){
-  const feat=extractFeatures(clip);
+  const feat=purpose==='test' ? pickTestFeat(clip) : extractFeatures(clip);
   const sensOn=Math.max(SENS_MIN,Math.min(SENS_MAX, store.gain||SENS_DEF));
   if(!feat || feat.onsetStrength<0.004/sensOn){
     toast('没听到清晰的敲击，再试一次','No clear tap detected — try again','Tiada ketukan jelas dikesan — cuba lagi');
