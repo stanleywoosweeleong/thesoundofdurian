@@ -616,6 +616,30 @@ function initLang(){
   if(firstLaunch){ showPick(true); pick.focus(); }
 }
 
+/* --- share: WhatsApp + copy link --- */
+const APP_URL='https://stanleywoosweeleong.github.io/thesoundofdurian/';
+function shareText(){
+  return T('敲榴莲 · 听声辨熟的田间小工具：','The Sound of Durian — listen for durian ripeness:','Bunyi Durian — dengar kematangan durian:')+' '+APP_URL;
+}
+function copyText(s){
+  if(navigator.clipboard&&window.isSecureContext) return navigator.clipboard.writeText(s);
+  // fallback for old browsers / non-secure contexts
+  return new Promise((ok,no)=>{
+    const ta=document.createElement('textarea');ta.value=s;ta.setAttribute('readonly','');
+    ta.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.appendChild(ta);ta.select();
+    let done=false;try{done=document.execCommand('copy');}catch(e){}
+    ta.remove();done?ok():no();
+  });
+}
+function initShare(){
+  const wa=$('#shareWa'), cp=$('#shareCopy');
+  // build the message at tap time so it follows the current language
+  if(wa) wa.onclick=()=>{ wa.href='https://wa.me/?text='+encodeURIComponent(shareText()); };
+  if(cp) cp.onclick=()=>copyText(APP_URL)
+    .then(()=>toast('链接已复制','Link copied','Pautan disalin'))
+    .catch(()=>toast('复制失败，请长按链接手动复制','Copy failed — long-press the link to copy','Gagal salin — tekan lama pautan untuk salin'));
+}
+
 function initSens(){
   const r=$('#sensRange'), v=$('#sensVal');
   if(!r) return;
@@ -635,6 +659,7 @@ function init(){
   }catch(e){ console.error('rec wiring',e); }
   try{ if(store.tool && $('#refTool')) $('#refTool').value=store.tool; }catch(e){}
   try{ initSens(); }catch(e){ console.error('sens init',e); }
+  try{ initShare(); }catch(e){ console.error('share init',e); }
   try{ renderRefs(); renderTestGate(); }catch(e){ console.error('render',e); }
   try{ liveAnalyser.init(); setStage('待机','idle','sedia','—',''); }catch(e){ console.error('canvas init',e); }
 }
