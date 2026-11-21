@@ -170,6 +170,29 @@ footer{max-width:520px;margin:0 auto;padding:6px 16px 30px;text-align:center;fon
   color:var(--cream);border-radius:12px;padding:11px 16px;font-size:13px;font-weight:600;
   box-shadow:0 8px 26px rgba(0,0,0,.28);max-width:calc(100% - 30px);opacity:0;transition:.25s;pointer-events:none}
 .toast.show{opacity:1}
+
+/* ---- "new version" bar ---- */
+.updbar{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:130;
+  display:flex;align-items:center;gap:10px;background:var(--shell);color:var(--cream);border-radius:14px;
+  padding:10px 10px 10px 16px;font-size:13.5px;font-weight:600;box-shadow:0 8px 26px rgba(0,0,0,.32);
+  max-width:calc(100% - 30px);white-space:nowrap}
+.updbar[hidden]{display:none}
+.updbar button{border:none;font:inherit;font-weight:800;border-radius:10px;cursor:pointer;min-height:38px}
+#updGo{background:var(--flesh);color:var(--shell);padding:6px 14px}
+#updX{background:transparent;color:var(--cream);opacity:.7;padding:6px 9px}
+
+/* ---- first-launch language picker ---- */
+#langpick{position:fixed;inset:0;z-index:200;background:var(--shell);color:var(--cream);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}
+#langpick[hidden]{display:none}
+#langpick:focus{outline:0}
+#langpick img{width:84px;height:84px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+#langpick .lptitle{margin:4px 0 14px;font-size:17px;font-weight:800;letter-spacing:.3px;text-align:center;line-height:1.5}
+#langpick button{width:min(18rem,84vw);min-height:58px;border:1px solid rgba(246,239,223,.3);border-radius:14px;
+  background:var(--shell-2);color:var(--cream);font:inherit;font-size:18px;font-weight:800;cursor:pointer}
+#langpick button:active{background:var(--flesh);color:var(--shell)}
+body.picking{overflow:hidden}
 </style>
 </head>
 <body>
@@ -251,6 +274,20 @@ footer{max-width:520px;margin:0 auto;padding:6px 16px 30px;text-align:center;fon
 </main>
 
 <div class="toast" id="toast"></div>
+
+<div class="updbar" id="updToast" role="status" aria-live="polite" hidden>
+  <span><span class="zh">有新版本</span><span class="en">A new version is ready</span><span class="ms">Versi baharu sedia</span></span>
+  <button type="button" id="updGo"><span class="zh">更新</span><span class="en">Refresh</span><span class="ms">Muat semula</span></button>
+  <button type="button" id="updX" aria-label="✕">✕</button>
+</div>
+
+<div id="langpick" role="dialog" aria-modal="true" tabindex="-1" aria-label="中文 · English · Bahasa Melayu" hidden>
+  <img src="icon-192.png" alt="">
+  <p class="lptitle">敲榴莲<br>The Sound of Durian · Bunyi Durian</p>
+  <button type="button" data-lang="zh" lang="zh-Hans">中文</button>
+  <button type="button" data-lang="en" lang="en">English</button>
+  <button type="button" data-lang="ms" lang="ms">Bahasa Melayu</button>
+</div>
 <script src="app.js"></script>
 </body>
 </html>

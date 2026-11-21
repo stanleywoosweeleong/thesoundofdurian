@@ -4,7 +4,6 @@
    naturally-dropped (=100% ripe) references, and reports closeness as a RANGE plus
    a plain confidence word — never a fake decimal. Everything is on-device.
    ------------------------------------------------------------------------------- */
-const CACHE_VERSION='tsod-20260710-12';
 const LS_KEY='tsod_v1';
 const MIN_REFS=10;          // target baseline; matching stays honest below this
 const OFFER_MATCH_AT=3;     // refuse to guess with fewer than this many refs
@@ -581,21 +580,40 @@ function initTabs(){
   if($('#'+saved))switchTab(saved);
 }
 function initLang(){
-  const sel=$('#langBtn');
+  const sel=$('#langBtn'), pick=$('#langpick');
+  const HTML_LANG={zh:'zh-Hans',en:'en',ms:'ms'};
   const apply=l=>{
     LANGS.forEach(x=>document.body.classList.toggle('lang-'+x,x===l));
-    document.documentElement.lang=l==='zh'?'zh-Hans':l;
+    document.documentElement.lang=HTML_LANG[l];
     sel.value=l;
   };
-  let saved='zh';try{saved=localStorage.getItem('tsod_lang')||'zh';}catch(e){}
-  apply(LANGS.includes(saved)?saved:'zh');
-  sel.onchange=()=>{
-    const l=LANGS.includes(sel.value)?sel.value:'zh';
-    apply(l);
+  // The one place a language choice is saved. Saves even when the choice equals
+  // what is already showing, so picking the default on first launch sticks.
+  const setLang=l=>{
+    if(!LANGS.includes(l)) return false;
+    const changed=l!==curLang();
     try{localStorage.setItem('tsod_lang',l);}catch(e){}
-    renderRefs();renderTestGate();
-    if(lastResultFeat) showResult(lastResultFeat);   // keep the result card in the new language
+    if(changed){
+      apply(l);
+      renderRefs();renderTestGate();
+      if(lastResultFeat) showResult(lastResultFeat);   // keep the result card in the new language
+    }
+    return true;
   };
+  const showPick=on=>{
+    pick.hidden=!on;
+    document.body.classList.toggle('picking',on);
+    [$('header'),$('nav.tabs'),$('main')].forEach(n=>{ if(n) n.inert=on; });
+  };
+  let saved=null;try{saved=localStorage.getItem('tsod_lang');}catch(e){}
+  const firstLaunch=!LANGS.includes(saved);   // nothing valid saved → ask first
+  apply(firstLaunch?'zh':saved);
+  sel.onchange=()=>{ if(!setLang(sel.value)) sel.value=curLang(); };
+  pick.onclick=e=>{
+    const b=e.target.closest('[data-lang]');
+    if(b&&setLang(b.dataset.lang)){ showPick(false); window.scrollTo(0,0); }
+  };
+  if(firstLaunch){ showPick(true); pick.focus(); }
 }
 
 function initSens(){
@@ -619,7 +637,6 @@ function init(){
   try{ initSens(); }catch(e){ console.error('sens init',e); }
   try{ renderRefs(); renderTestGate(); }catch(e){ console.error('render',e); }
   try{ liveAnalyser.init(); setStage('待机','idle','sedia','—',''); }catch(e){ console.error('canvas init',e); }
-  try{ const v=$('#verLine'); if(v) v.textContent=CACHE_VERSION; }catch(e){}
 }
 // Run after the DOM is parsed. The script tag sits at end-of-body, but guard
 // anyway in case it's ever moved or the document isn't ready yet.
@@ -633,23 +650,21 @@ if(document.readyState==='loading'){
    indicator doesn't linger and battery is spared. */
 window.addEventListener('pagehide',()=>{ try{Recorder.releaseStream();}catch(_){}} );
 
-/* --- service worker (update-aware, mirrors durianripe pattern) --- */
-if('serviceWorker' in navigator){
-  let refreshing=false;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshing)return;refreshing=true;location.reload();});
-  function updToast(worker){
-    if($('#updToast'))return;
-    const t=document.createElement('div');t.id='updToast';t.className='toast show';t.style.cssText+='display:flex;gap:12px;align-items:center;bottom:22px;pointer-events:auto';
-    t.innerHTML=`<span>${T('有新版本','New version','Versi baharu tersedia')}</span>`;
-    const b=document.createElement('button');b.textContent=T('更新','Update','Kemas kini');
-    b.style.cssText='border:none;background:var(--flesh);color:var(--shell);font-weight:800;border-radius:9px;padding:6px 12px;cursor:pointer';
-    b.onclick=()=>{b.textContent=T('更新中…','Updating…','Mengemas kini…');worker.postMessage({type:'SKIP_WAITING'});};
-    t.appendChild(b);document.body.appendChild(t);
-  }
-  navigator.serviceWorker.register('sw.js').then(reg=>{
-    if(reg.waiting&&navigator.serviceWorker.controller)updToast(reg.waiting);
-    reg.addEventListener('updatefound',()=>{const nw=reg.installing;if(!nw)return;
-      nw.addEventListener('statechange',()=>{if(nw.state==='installed'&&navigator.serviceWorker.controller)updToast(nw);});});
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update().catch(()=>{});});
-  }).catch(()=>{});
-}
+/* --- service worker: content-based auto-update (no version to bump) ---
+   The worker serves the saved app instantly. On launch and whenever the app
+   returns to the foreground the page asks it to "check"; if the app code
+   changed it answers "updated" and the bar below offers a reload. */
+(function(){
+  const bar=$('#updToast'); if(!bar) return;
+  $('#updGo').onclick=()=>location.reload();
+  $('#updX').onclick=()=>{bar.hidden=true;};
+  if(!('serviceWorker' in navigator)||location.protocol==='file:') return;
+  const askForUpdate=()=>{
+    if(navigator.onLine===false) return;
+    navigator.serviceWorker.ready.then(reg=>{ if(reg.active) reg.active.postMessage('check'); }).catch(()=>{});
+  };
+  navigator.serviceWorker.addEventListener('message',e=>{ if(e.data==='updated') bar.hidden=false; });
+  const reg=()=>navigator.serviceWorker.register('./sw.js').then(askForUpdate).catch(()=>{});
+  if(document.readyState==='complete') reg(); else window.addEventListener('load',reg);
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') askForUpdate(); });
+})();
